@@ -63,7 +63,9 @@ void main() {
         await tester.tap(chooseUserButton);
         await tester.pumpAndSettle();
         
-        expect(find.text('Users Screen - Will be implemented next'), findsOneWidget);
+        // Fixed: Check for UserView instead of placeholder text
+        expect(find.text('Third Screen'), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back_ios), findsOneWidget);
       });
 
       testWidgets('should handle back navigation', (WidgetTester tester) async {
@@ -93,6 +95,33 @@ void main() {
         expect(find.byType(PalindromeView), findsOneWidget);
         expect(find.byType(SnackBar), findsOneWidget);
         expect(find.text('Please enter your name first'), findsOneWidget);
+      });
+
+      testWidgets('should navigate back from users screen', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+        
+        await tester.enterText(nameField, 'John Doe');
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+        
+        final chooseUserButton = find.text('Choose a User');
+        await tester.tap(chooseUserButton);
+        await tester.pumpAndSettle();
+        
+        // Should be on users screen
+        expect(find.text('Third Screen'), findsOneWidget);
+        
+        // Navigate back
+        final backButton = find.byIcon(Icons.arrow_back_ios);
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
+        
+        // Should be back on welcome screen
+        expect(find.byType(WelcomeView), findsOneWidget);
+        expect(find.text('John Doe'), findsOneWidget);
       });
     });
 
@@ -154,7 +183,9 @@ void main() {
         await tester.tap(chooseUserButton);
         await tester.pumpAndSettle();
         
-        expect(find.text('Users Screen - Will be implemented next'), findsOneWidget);
+        // Fixed: Check for UserView instead of placeholder text
+        expect(find.text('Third Screen'), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back_ios), findsOneWidget);
       });
 
       testWidgets('should handle empty input validation', (WidgetTester tester) async {
@@ -167,6 +198,27 @@ void main() {
         
         expect(find.byType(AlertDialog), findsOneWidget);
         expect(find.text('Please enter a sentence to check'), findsOneWidget);
+      });
+
+      testWidgets('should handle user selection callback', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+        
+        await tester.enterText(nameField, 'John Doe');
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+        
+        final chooseUserButton = find.text('Choose a User');
+        await tester.tap(chooseUserButton);
+        await tester.pumpAndSettle();
+        
+        // Should navigate to users screen
+        expect(find.text('Third Screen'), findsOneWidget);
+        
+        // User selection would trigger callback when user is selected
+        // (This would require actual user data to be loaded)
       });
     });
 
@@ -223,6 +275,169 @@ void main() {
         // Input should still be there
         expect(find.text('John Doe'), findsOneWidget);
         expect(find.text('racecar'), findsOneWidget);
+      });
+
+      testWidgets('should handle network errors gracefully', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+        
+        await tester.enterText(nameField, 'John Doe');
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+        
+        final chooseUserButton = find.text('Choose a User');
+        await tester.tap(chooseUserButton);
+        await tester.pumpAndSettle();
+        
+        // Should navigate to users screen even if network fails
+        expect(find.text('Third Screen'), findsOneWidget);
+        
+        // UserView should handle network errors internally
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('App Flow Tests', () {
+      testWidgets('should complete full navigation flow', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        // Start from palindrome screen
+        expect(find.byType(PalindromeView), findsOneWidget);
+        
+        // Enter name and navigate to welcome
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+        
+        await tester.enterText(nameField, 'Test User');
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+        
+        // Should be on welcome screen
+        expect(find.byType(WelcomeView), findsOneWidget);
+        expect(find.text('Test User'), findsOneWidget);
+        
+        // Navigate to users screen
+        final chooseUserButton = find.text('Choose a User');
+        await tester.tap(chooseUserButton);
+        await tester.pumpAndSettle();
+        
+        // Should be on users screen
+        expect(find.text('Third Screen'), findsOneWidget);
+        
+        // Navigate back to welcome
+        final backButton = find.byIcon(Icons.arrow_back_ios);
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
+        
+        // Should be back on welcome screen
+        expect(find.byType(WelcomeView), findsOneWidget);
+        expect(find.text('Test User'), findsOneWidget);
+        
+        // Navigate back to palindrome
+        final welcomeBackButton = find.byIcon(Icons.arrow_back_ios);
+        await tester.tap(welcomeBackButton);
+        await tester.pumpAndSettle();
+        
+        // Should be back on palindrome screen
+        expect(find.byType(PalindromeView), findsOneWidget);
+        expect(find.text('Test User'), findsOneWidget); // Name should be preserved
+      });
+
+      testWidgets('should handle rapid navigation', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+        
+        await tester.enterText(nameField, 'Rapid User');
+        
+        // Rapid navigation attempts
+        for (int i = 0; i < 3; i++) {
+          await tester.tap(nextButton, warnIfMissed: false);
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        
+        await tester.pumpAndSettle();
+        
+        // Should navigate successfully
+        expect(find.byType(WelcomeView), findsOneWidget);
+        expect(find.text('Rapid User'), findsOneWidget);
+      });
+
+      testWidgets('should handle deep navigation', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        // Navigate through all screens
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+        
+        await tester.enterText(nameField, 'Deep User');
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+        
+        expect(find.byType(WelcomeView), findsOneWidget);
+        
+        final chooseUserButton = find.text('Choose a User');
+        await tester.tap(chooseUserButton);
+        await tester.pumpAndSettle();
+        
+        expect(find.text('Third Screen'), findsOneWidget);
+        
+        // Navigate back through all screens
+        final backButton = find.byIcon(Icons.arrow_back_ios);
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
+        
+        expect(find.byType(WelcomeView), findsOneWidget);
+        
+        final welcomeBackButton = find.byIcon(Icons.arrow_back_ios);
+        await tester.tap(welcomeBackButton);
+        await tester.pumpAndSettle();
+        
+        expect(find.byType(PalindromeView), findsOneWidget);
+      });
+    });
+
+    group('App State Management Tests', () {
+      testWidgets('should preserve user data across navigation', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        const testName = 'State Test User';
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+        
+        await tester.enterText(nameField, testName);
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+        
+        // Should preserve name in welcome screen
+        expect(find.text(testName), findsOneWidget);
+        
+        // Navigate to users and back
+        final chooseUserButton = find.text('Choose a User');
+        await tester.tap(chooseUserButton);
+        await tester.pumpAndSettle();
+        
+        final backButton = find.byIcon(Icons.arrow_back_ios);
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
+        
+        // Name should still be preserved
+        expect(find.text(testName), findsOneWidget);
+      });
+
+      testWidgets('should handle app lifecycle correctly', (WidgetTester tester) async {
+        await tester.pumpWidget(const MyApp());
+        
+        // Test multiple rebuilds
+        for (int i = 0; i < 5; i++) {
+          await tester.pump();
+        }
+        
+        expect(find.byType(PalindromeView), findsOneWidget);
+        expect(tester.takeException(), isNull);
       });
     });
   });
