@@ -19,14 +19,13 @@ class WelcomeViewModel extends ChangeNotifier {
   void initializeWithName(String name) {
     final trimmedName = name.trim();
     if (trimmedName.isEmpty) {
-      return; // Don't update with empty string
+      return;
     }
 
-    // ✅ Check if username changed - if so, reset selectedUserName
     if (_model.userName != trimmedName) {
       _model = _model.copyWith(
         userName: trimmedName,
-        selectedUserName: 'Selected User Name', // Reset selection for new user
+        selectedUserName: 'Selected User Name',
       );
     } else {
       // Username sama, preserve selectedUserName
@@ -41,13 +40,11 @@ class WelcomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ Add method to completely reset state
   void resetState() {
     _model = WelcomeModel.empty();
     notifyListeners();
   }
 
-  // ✅ Add method to check if user changed
   bool hasUserChanged(String newUserName) {
     return _model.userName != newUserName.trim();
   }

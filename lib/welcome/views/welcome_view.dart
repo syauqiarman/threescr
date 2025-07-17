@@ -22,12 +22,9 @@ class _WelcomeViewState extends State<WelcomeView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<WelcomeViewModel>();
       
-      // ✅ Check if user changed and handle accordingly
       if (viewModel.hasUserChanged(widget.userName)) {
-        // User changed, initialize with reset
         viewModel.initializeWithName(widget.userName);
       } else {
-        // Same user, just update name (preserve selection)
         viewModel.initializeWithName(widget.userName);
       }
     });

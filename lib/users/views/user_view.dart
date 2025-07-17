@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../viewmodels/user_viewmodel.dart';  // Updated import
+import 'package:provider/provider.dart';
+import '../viewmodels/user_viewmodel.dart';
 import '../models/user_model.dart';
 
-class UserView extends StatefulWidget {  // Changed from UsersView
+class UserView extends StatefulWidget {
   final Function(String) onUserSelected;
   
   const UserView({super.key, required this.onUserSelected});
@@ -12,7 +13,6 @@ class UserView extends StatefulWidget {  // Changed from UsersView
 }
 
 class _UserViewState extends State<UserView> {
-  late UserViewModel _viewModel;  // Changed from UsersViewModel
   late ScrollController _scrollController;
   
   static const Color _greyLight = Color(0xFFE0E0E0);
@@ -25,26 +25,23 @@ class _UserViewState extends State<UserView> {
   @override
   void initState() {
     super.initState();
-    _viewModel = UserViewModel();  // Changed from UsersViewModel
     _scrollController = ScrollController();
-    
-    _viewModel.addListener(() => setState(() {}));
     _scrollController.addListener(_onScroll);
     
-    // Load initial data
-    _viewModel.loadUsers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UserViewModel>().loadUsers();
+    });
   }
   
   @override
   void dispose() {
-    _viewModel.dispose();
     _scrollController.dispose();
     super.dispose();
   }
   
   void _onScroll() {
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-      _viewModel.loadMoreUsers();
+      context.read<UserViewModel>().loadMoreUsers();
     }
   }
   
@@ -78,12 +75,16 @@ class _UserViewState extends State<UserView> {
         ),
         centerTitle: true,
       ),
-      body: _buildBody(),
+      body: Consumer<UserViewModel>(
+        builder: (context, viewModel, child) {
+          return _buildBody(viewModel);
+        },
+      ),
     );
   }
   
-  Widget _buildBody() {
-    if (_viewModel.isLoading) {
+  Widget _buildBody(UserViewModel viewModel) {
+    if (viewModel.isLoading) {
       return const Center(
         child: CircularProgressIndicator(
           color: _primaryColor,
@@ -91,27 +92,27 @@ class _UserViewState extends State<UserView> {
       );
     }
     
-    if (_viewModel.loadingState == LoadingState.error && _viewModel.users.isEmpty) {
+    if (viewModel.loadingState == LoadingState.error && viewModel.users.isEmpty) {
       return _buildErrorState();
     }
     
-    if (_viewModel.isEmpty) {
+    if (viewModel.isEmpty) {
       return _buildEmptyState();
     }
     
     return RefreshIndicator(
-      onRefresh: _viewModel.refreshUsers,
+      onRefresh: () => context.read<UserViewModel>().refreshUsers(),
       color: _primaryColor,
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: _viewModel.users.length + (_viewModel.hasMore ? 1 : 0),
+        itemCount: viewModel.users.length + (viewModel.hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == _viewModel.users.length) {
+          if (index == viewModel.users.length) {
             return _buildLoadingMoreIndicator();
           }
           
-          final user = _viewModel.users[index];
+          final user = viewModel.users[index];
           return _buildUserItem(user);
         },
       ),
@@ -296,7 +297,7 @@ class _UserViewState extends State<UserView> {
       title: 'Something went wrong',
       subtitle: 'Unable to load users from API',
       actionButton: ElevatedButton(
-        onPressed: _viewModel.retry,
+        onPressed: () => context.read<UserViewModel>().retry(),
         style: ElevatedButton.styleFrom(
           backgroundColor: _primaryColor,
           foregroundColor: Colors.white,
