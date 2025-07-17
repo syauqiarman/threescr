@@ -4,30 +4,51 @@ import '../models/welcome_model.dart';
 class WelcomeViewModel extends ChangeNotifier {
   WelcomeModel _model = WelcomeModel.empty();
 
-  // Getters
   String get userName => _model.userName;
   String get selectedUserName => _model.selectedUserName;
 
-  // Update methods
-  void updateUserName(String userName) {
-    _model = _model.copyWith(userName: userName);
-    notifyListeners();
-  }
-
   void updateSelectedUserName(String selectedUserName) {
-    _model = _model.copyWith(selectedUserName: selectedUserName);
+    if (selectedUserName.trim().isEmpty) {
+      return; // Don't update with empty string
+    }
+
+    _model = _model.copyWith(selectedUserName: selectedUserName.trim());
     notifyListeners();
   }
 
-  // Initialize with name from first screen
   void initializeWithName(String name) {
-    _model = _model.copyWith(userName: name);
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      return; // Don't update with empty string
+    }
+
+    // ✅ Check if username changed - if so, reset selectedUserName
+    if (_model.userName != trimmedName) {
+      _model = _model.copyWith(
+        userName: trimmedName,
+        selectedUserName: 'Selected User Name', // Reset selection for new user
+      );
+    } else {
+      // Username sama, preserve selectedUserName
+      _model = _model.copyWith(userName: trimmedName);
+    }
+
     notifyListeners();
   }
 
-  // Reset selected user
   void resetSelectedUser() {
     _model = _model.copyWith(selectedUserName: 'Selected User Name');
     notifyListeners();
+  }
+
+  // ✅ Add method to completely reset state
+  void resetState() {
+    _model = WelcomeModel.empty();
+    notifyListeners();
+  }
+
+  // ✅ Add method to check if user changed
+  bool hasUserChanged(String newUserName) {
+    return _model.userName != newUserName.trim();
   }
 }

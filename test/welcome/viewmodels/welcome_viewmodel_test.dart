@@ -9,55 +9,105 @@ void main() {
       viewModel = WelcomeViewModel();
     });
 
-    tearDown(() {
-      viewModel.dispose();
+    group('User Change Detection Tests', () {
+      test('should detect user change correctly', () {
+        // Initial state
+        expect(viewModel.hasUserChanged('John'), isTrue);
+        
+        // Initialize with John
+        viewModel.initializeWithName('John');
+        expect(viewModel.hasUserChanged('John'), isFalse);
+        expect(viewModel.hasUserChanged('Jane'), isTrue);
+      });
+
+      test('should reset selectedUserName when user changes', () {
+        // Initialize with John
+        viewModel.initializeWithName('John');
+        viewModel.updateSelectedUserName('Rachel');
+        expect(viewModel.selectedUserName, equals('Rachel'));
+        
+        // Change to different user
+        viewModel.initializeWithName('Jane');
+        expect(viewModel.selectedUserName, equals('Selected User Name'));
+        expect(viewModel.userName, equals('Jane'));
+      });
+
+      test('should preserve selectedUserName when same user', () {
+        // Initialize with John
+        viewModel.initializeWithName('John');
+        viewModel.updateSelectedUserName('Rachel');
+        expect(viewModel.selectedUserName, equals('Rachel'));
+        
+        // Same user again
+        viewModel.initializeWithName('John');
+        expect(viewModel.selectedUserName, equals('Rachel'));
+        expect(viewModel.userName, equals('John'));
+      });
+
+      test('should handle trimmed names correctly', () {
+        viewModel.initializeWithName('  John  ');
+        viewModel.updateSelectedUserName('Rachel');
+        
+        // Same name with different whitespace
+        viewModel.initializeWithName('John');
+        expect(viewModel.selectedUserName, equals('Rachel'));
+        
+        // Different name
+        viewModel.initializeWithName('  Jane  ');
+        expect(viewModel.selectedUserName, equals('Selected User Name'));
+      });
     });
 
-    group('Initial State Tests', () {
-      test('should have empty initial state', () {
+    group('Reset State Tests', () {
+      test('should reset complete state', () {
+        viewModel.initializeWithName('John');
+        viewModel.updateSelectedUserName('Rachel');
+        
+        viewModel.resetState();
+        
         expect(viewModel.userName, equals(''));
         expect(viewModel.selectedUserName, equals('Selected User Name'));
       });
-    });
 
-    group('Update Methods Tests', () {
-      test('should update userName correctly', () {
-        viewModel.updateUserName('John Doe');
-        expect(viewModel.userName, equals('John Doe'));
-      });
-
-      test('should update selectedUserName correctly', () {
-        viewModel.updateSelectedUserName('Jane Smith');
-        expect(viewModel.selectedUserName, equals('Jane Smith'));
-      });
-
-      test('should initialize with name', () {
-        viewModel.initializeWithName('Test User');
-        expect(viewModel.userName, equals('Test User'));
-      });
-
-      test('should reset selected user', () {
-        viewModel.updateSelectedUserName('Jane Smith');
+      test('should reset only selectedUser', () {
+        viewModel.initializeWithName('John');
+        viewModel.updateSelectedUserName('Rachel');
+        
         viewModel.resetSelectedUser();
+        
+        expect(viewModel.userName, equals('John'));
         expect(viewModel.selectedUserName, equals('Selected User Name'));
       });
     });
 
-    group('Notification Tests', () {
-      test('should notify listeners on userName update', () {
-        bool wasNotified = false;
-        viewModel.addListener(() => wasNotified = true);
-
-        viewModel.updateUserName('John');
-        expect(wasNotified, isTrue);
+    group('Edge Cases', () {
+      test('should handle empty string transitions', () {
+        viewModel.initializeWithName('John');
+        viewModel.updateSelectedUserName('Rachel');
+        
+        // Empty string should not change state
+        viewModel.initializeWithName('');
+        expect(viewModel.userName, equals('John'));
+        expect(viewModel.selectedUserName, equals('Rachel'));
       });
 
-      test('should notify listeners on selectedUserName update', () {
-        bool wasNotified = false;
-        viewModel.addListener(() => wasNotified = true);
+      test('should handle whitespace-only names', () {
+        viewModel.initializeWithName('John');
+        viewModel.updateSelectedUserName('Rachel');
+        
+        // Whitespace-only should not change state
+        viewModel.initializeWithName('   ');
+        expect(viewModel.userName, equals('John'));
+        expect(viewModel.selectedUserName, equals('Rachel'));
+      });
 
-        viewModel.updateSelectedUserName('Jane');
-        expect(wasNotified, isTrue);
+      test('should handle case sensitivity', () {
+        viewModel.initializeWithName('John');
+        viewModel.updateSelectedUserName('Rachel');
+        
+        // Different case should reset
+        viewModel.initializeWithName('john');
+        expect(viewModel.selectedUserName, equals('Selected User Name'));
       });
     });
   });

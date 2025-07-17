@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../viewmodels/welcome_viewmodel.dart';
 
 class WelcomeView extends StatefulWidget {
@@ -14,30 +15,39 @@ class WelcomeView extends StatefulWidget {
 }
 
 class _WelcomeViewState extends State<WelcomeView> {
-  late WelcomeViewModel _viewModel;
-
   @override
   void initState() {
     super.initState();
-    _viewModel = WelcomeViewModel();
-    _viewModel.initializeWithName(widget.userName);
-    _viewModel.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _viewModel.dispose();
-    super.dispose();
+    // Initialize dengan proper state handling
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = context.read<WelcomeViewModel>();
+      
+      // ✅ Check if user changed and handle accordingly
+      if (viewModel.hasUserChanged(widget.userName)) {
+        // User changed, initialize with reset
+        viewModel.initializeWithName(widget.userName);
+      } else {
+        // Same user, just update name (preserve selection)
+        viewModel.initializeWithName(widget.userName);
+      }
+    });
   }
 
   void _onChooseUserPressed() {
-    Navigator.pushNamed(
-      context,
-      '/users',
-      arguments: (String selectedUserName) {
-        _viewModel.updateSelectedUserName(selectedUserName);
-      },
-    );
+    try {
+      Navigator.pushNamed(
+        context,
+        '/users',
+        arguments: (String selectedUserName) {
+          context.read<WelcomeViewModel>().updateSelectedUserName(selectedUserName);
+        },
+      );
+    } catch (e) {
+      // Handle navigation error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Navigation error: ${e.toString()}')),
+      );
+    }
   }
 
   @override
@@ -65,20 +75,24 @@ class _WelcomeViewState extends State<WelcomeView> {
         ),
         centerTitle: true,
       ),
-      body: _buildBody(),
+      body: Consumer<WelcomeViewModel>(
+        builder: (context, viewModel, child) {
+          return _buildBody(viewModel);
+        },
+      ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(WelcomeViewModel viewModel) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 40),
-          _buildWelcomeSection(),
+          _buildWelcomeSection(viewModel),
           const Spacer(),
-          _buildSelectedUserSection(),
+          _buildSelectedUserSection(viewModel),
           const Spacer(),
           _buildChooseUserButton(),
           const SizedBox(height: 40),
@@ -87,7 +101,7 @@ class _WelcomeViewState extends State<WelcomeView> {
     );
   }
 
-  Widget _buildWelcomeSection() {
+  Widget _buildWelcomeSection(WelcomeViewModel viewModel) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -101,7 +115,7 @@ class _WelcomeViewState extends State<WelcomeView> {
         ),
         const SizedBox(height: 4),
         Text(
-          _viewModel.userName,
+          viewModel.userName,
           style: const TextStyle(
             fontSize: 18,
             color: Colors.black,
@@ -112,10 +126,10 @@ class _WelcomeViewState extends State<WelcomeView> {
     );
   }
 
-  Widget _buildSelectedUserSection() {
+  Widget _buildSelectedUserSection(WelcomeViewModel viewModel) {
     return Center(
       child: Text(
-        _viewModel.selectedUserName,
+        viewModel.selectedUserName,
         style: const TextStyle(
           fontSize: 24,
           color: Colors.black,
