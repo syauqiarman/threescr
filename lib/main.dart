@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:threescr/palindrome/views/palindrome_view.dart';
 import 'package:threescr/welcome/views/welcome_view.dart';
+import 'package:threescr/users/views/user_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,26 +27,9 @@ class MyApp extends StatelessWidget {
         },
         '/users': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Function(String)?;
-          return UsersView(onUserSelected: args ?? (String name) {});
+          return UserView(onUserSelected: args ?? (String name) {});
         },
       },
-    );
-  }
-}
-
-// Temporary placeholder for UsersView
-class UsersView extends StatelessWidget {
-  final Function(String) onUserSelected;
-  
-  const UsersView({super.key, required this.onUserSelected});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Users')),
-      body: const Center(
-        child: Text('Users Screen - Will be implemented next'),
-      ),
     );
   }
 }
