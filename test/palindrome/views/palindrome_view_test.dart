@@ -164,7 +164,34 @@ void main() {
     });
 
     group('NEXT Button - Positive Cases', () {
-      testWidgets('should show snackbar when NEXT button is tapped', (WidgetTester tester) async {
+      testWidgets('should navigate to welcome screen when name is provided', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: const PalindromeView(),
+            routes: {
+              '/welcome': (context) => const Scaffold(
+                body: Text('Welcome Screen'),
+              ),
+            },
+          ),
+        );
+
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+
+        // Enter name first
+        await tester.enterText(nameField, 'John Doe');
+        await tester.pump();
+
+        // Tap NEXT button
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        // Should navigate to welcome screen
+        expect(find.text('Welcome Screen'), findsOneWidget);
+      });
+
+      testWidgets('should show snackbar when NEXT button is tapped without name', (WidgetTester tester) async {
         await tester.pumpWidget(const MaterialApp(home: PalindromeView()));
 
         final nextButton = find.text('NEXT');
@@ -173,7 +200,37 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(SnackBar), findsOneWidget);
-        expect(find.text('You have pressed the Next button'), findsOneWidget);
+        expect(find.text('Please enter your name first'), findsOneWidget);
+      });
+
+      testWidgets('should navigate with trimmed name containing spaces', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: const PalindromeView(),
+            routes: {
+              '/welcome': (context) {
+                final args = ModalRoute.of(context)?.settings.arguments as String?;
+                return Scaffold(
+                  body: Text('Welcome: $args'),
+                );
+              },
+            },
+          ),
+        );
+
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+
+        // Enter name with leading/trailing spaces
+        await tester.enterText(nameField, '  John Doe  ');
+        await tester.pump();
+
+        // Tap NEXT button
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        // Should navigate with trimmed name
+        expect(find.text('Welcome: John Doe'), findsOneWidget);
       });
     });
 
@@ -197,11 +254,155 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(SnackBar), findsOneWidget);
       });
+
+      testWidgets('should handle navigation error gracefully', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: const PalindromeView(),
+            // No routes defined - should handle navigation error
+            onUnknownRoute: (settings) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Text('Route not found'),
+                ),
+              );
+            },
+          ),
+        );
+
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+
+        // Enter name first
+        await tester.enterText(nameField, 'John Doe');
+        await tester.pump();
+
+        // Tap NEXT button - should navigate to unknown route handler
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        // Should show error handling page
+        expect(find.text('Route not found'), findsOneWidget);
+      });
+
+      testWidgets('should show snackbar for whitespace-only name', (WidgetTester tester) async {
+        await tester.pumpWidget(const MaterialApp(home: PalindromeView()));
+
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+
+        // Enter whitespace-only name
+        await tester.enterText(nameField, '   ');
+        await tester.pump();
+
+        // Tap NEXT button
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        // Should show snackbar because trimmed result is empty
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text('Please enter your name first'), findsOneWidget);
+      });
+    });
+
+    group('NEXT Button - Edge Cases', () {
+      testWidgets('should handle special characters in name during navigation', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: const PalindromeView(),
+            routes: {
+              '/welcome': (context) {
+                final args = ModalRoute.of(context)?.settings.arguments as String?;
+                return Scaffold(
+                  body: Text('Welcome: $args'),
+                );
+              },
+            },
+          ),
+        );
+
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+
+        // Enter name with special characters
+        await tester.enterText(nameField, 'João da Silva @123!');
+        await tester.pump();
+
+        // Tap NEXT button
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        // Should navigate with special characters preserved
+        expect(find.text('Welcome: João da Silva @123!'), findsOneWidget);
+      });
+
+      testWidgets('should handle very long name during navigation', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: const PalindromeView(),
+            routes: {
+              '/welcome': (context) {
+                final args = ModalRoute.of(context)?.settings.arguments as String?;
+                return Scaffold(
+                  body: Text('Welcome: ${args?.length} chars'),
+                );
+              },
+            },
+          ),
+        );
+
+        final nameField = find.byType(TextField).first;
+        final nextButton = find.text('NEXT');
+
+        // Enter very long name
+        final longName = 'A' * 100;
+        await tester.enterText(nameField, longName);
+        await tester.pump();
+
+        // Tap NEXT button
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        // Should navigate with long name
+        expect(find.text('Welcome: 100 chars'), findsOneWidget);
+      });
+
+      testWidgets('should handle navigation with multiple SnackBars', (WidgetTester tester) async {
+        await tester.pumpWidget(const MaterialApp(home: PalindromeView()));
+
+        final nextButton = find.text('NEXT');
+
+        // First tap - should show first snackbar
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text('Please enter your name first'), findsOneWidget);
+
+        // Wait for snackbar to dismiss
+        await tester.pump(const Duration(seconds: 3));
+
+        // Second tap - should show another snackbar
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text('Please enter your name first'), findsOneWidget);
+      });
     });
 
     group('Integration Tests', () {
       testWidgets('should handle complete flow - positive case', (WidgetTester tester) async {
-        await tester.pumpWidget(const MaterialApp(home: PalindromeView()));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: const PalindromeView(),
+            routes: {
+              '/welcome': (context) => const Scaffold(
+                body: Text('Welcome Screen'),
+              ),
+            },
+          ),
+        );
 
         final nameField = find.byType(TextField).first;
         final palindromeField = find.byType(TextField).at(1);
@@ -221,10 +422,10 @@ void main() {
         await tester.tap(find.text('OK'));
         await tester.pumpAndSettle();
 
-        // Tap next
+        // Tap next - should navigate to welcome screen
         await tester.tap(nextButton);
         await tester.pumpAndSettle();
-        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text('Welcome Screen'), findsOneWidget);
       });
 
       testWidgets('should handle complete flow - negative case', (WidgetTester tester) async {
@@ -237,6 +438,18 @@ void main() {
         await tester.pumpAndSettle();
         
         expect(find.text('Please enter a sentence to check'), findsOneWidget);
+      });
+
+      testWidgets('should handle NEXT button without name', (WidgetTester tester) async {
+        await tester.pumpWidget(const MaterialApp(home: PalindromeView()));
+
+        final nextButton = find.text('NEXT');
+
+        // Try to tap NEXT without entering name
+        await tester.tap(nextButton);
+        await tester.pumpAndSettle();
+        
+        expect(find.text('Please enter your name first'), findsOneWidget);
       });
     });
   });
