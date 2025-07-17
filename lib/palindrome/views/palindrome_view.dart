@@ -47,11 +47,20 @@ class _PalindromeViewState extends State<PalindromeView> {
   }
 
   void _onNextPressed() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("You have pressed the Next button"),
-        duration: Duration(seconds: 2),
-      ),
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your name first"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      '/welcome',
+      arguments: _nameController.text.trim(),
     );
   }
 
