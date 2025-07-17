@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../viewmodels/palindrome_viewmodel.dart';
 
 class PalindromeView extends StatefulWidget {
@@ -9,25 +10,6 @@ class PalindromeView extends StatefulWidget {
 }
 
 class _PalindromeViewState extends State<PalindromeView> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _sentenceController = TextEditingController();
-  late PalindromeViewModel _viewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    _viewModel = PalindromeViewModel();
-    _viewModel.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _sentenceController.dispose();
-    _viewModel.dispose();
-    super.dispose();
-  }
-
   void _showDialog(String message) {
     showDialog(
       context: context,
@@ -47,7 +29,8 @@ class _PalindromeViewState extends State<PalindromeView> {
   }
 
   void _onNextPressed() {
-    if (_nameController.text.trim().isEmpty) {
+    final viewModel = context.read<PalindromeViewModel>();
+    if (viewModel.name.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please enter your name first"),
@@ -60,31 +43,36 @@ class _PalindromeViewState extends State<PalindromeView> {
     Navigator.pushNamed(
       context,
       '/welcome',
-      arguments: _nameController.text.trim(),
+      arguments: viewModel.name.trim(),
     );
   }
 
   void _onCheckPressed() {
-    _viewModel.checkPalindrome();
-    _showDialog(_viewModel.resultMessage);
+    final viewModel = context.read<PalindromeViewModel>();
+    viewModel.checkPalindrome();
+    _showDialog(viewModel.resultMessage);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildBody(),
+      body: Consumer<PalindromeViewModel>(
+        builder: (context, viewModel, child) {
+          return _buildBody(viewModel);
+        },
+      ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(PalindromeViewModel viewModel) {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
           colors: [
-            Color(0xFF66A8A7), // Teal
-            Color(0xFF3A5988), // Light blue
+            Color(0xFF66A8A7),
+            Color(0xFF3A5988),
           ],
         ),
       ),
@@ -101,9 +89,17 @@ class _PalindromeViewState extends State<PalindromeView> {
                   const Spacer(flex: 2),
                   _buildProfilePicture(),
                   const Spacer(flex: 1),
-                  _buildTextField("Name", _nameController, _viewModel.updateName),
+                  _buildTextField(
+                    "Name",
+                    viewModel.name,
+                    (value) => viewModel.updateName(value),
+                  ),
                   const SizedBox(height: 20),
-                  _buildTextField("Palindrome", _sentenceController, _viewModel.updateSentence),
+                  _buildTextField(
+                    "Palindrome",
+                    viewModel.sentence,
+                    (value) => viewModel.updateSentence(value),
+                  ),
                   const SizedBox(height: 40),
                   _buildButton("CHECK", _onCheckPressed),
                   const SizedBox(height: 20),
@@ -125,7 +121,7 @@ class _PalindromeViewState extends State<PalindromeView> {
         height: 116,
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          color: Color(0x40FFFFFF), // White dengan alpha 0x40 (25%)
+          color: Color(0x40FFFFFF),
         ),
         child: const Icon(
           Icons.person_add_alt_1,
@@ -136,7 +132,11 @@ class _PalindromeViewState extends State<PalindromeView> {
     );
   }
 
-  Widget _buildTextField(String hintText, TextEditingController controller, Function(String) onChanged) {
+  Widget _buildTextField(
+    String hintText,
+    String value,
+    Function(String) onChanged,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -146,8 +146,8 @@ class _PalindromeViewState extends State<PalindromeView> {
           width: 0.5,
         ),
       ),
-      child: TextField(
-        controller: controller,
+      child: TextFormField(
+        initialValue: value,
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hintText,
@@ -170,7 +170,7 @@ class _PalindromeViewState extends State<PalindromeView> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x26000000), // Black dengan alpha 0x26 (15%)
+            color: Color(0x26000000),
             blurRadius: 8,
             offset: Offset(0, 4),
           ),
